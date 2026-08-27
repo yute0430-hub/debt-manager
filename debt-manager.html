@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>借金返済管理ツール</title>
+<style>
+  :root { --accent:#0abab5; --bg:#07100f; --card:#0e1f1d; --border:#1a3330; --text:#e0f0ef; --muted:#6b9e9a; --danger:#e05c5c; --warning:#e0a85c; --success:#5ce07a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI','Hiragino Sans','Yu Gothic UI',sans-serif; min-height:100vh; }
+  #setup { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .setup-box { width:100%; max-width:520px; }
+  .setup-logo { text-align:center; margin-bottom:32px; }
+  .setup-logo .icon { font-size:52px; display:block; margin-bottom:14px; }
+  .setup-logo h1 { font-size:24px; font-weight:700; color:var(--accent); margin-bottom:6px; }
+  .setup-logo p { font-size:13px; color:var(--muted); }
+  .setup-steps { display:flex; gap:8px; margin-bottom:24px; justify-content:center; }
+  .setup-step { width:8px; height:8px; border-radius:50%; background:var(--border); transition:background .3s; }
+  .setup-step.active { background:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:14px; }
+  .card-title { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:14px; }
+  .card-value { font-size:26px; font-weight:700; }
+  .card-value.danger { color:var(--danger); }
+  .card-value.accent { color:var(--accent); }
+  .card-value.warning { color:var(--warning); }
+  .card-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block; font-size:12px; color:var(--muted); margin-bottom:5px; }
+  input[type=text],input[type=number],input[type=date],select { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:7px; font-size:14px; font-family:inherit; transition:border-color .2s; }
+  input:focus,select:focus { outline:none; border-color:var(--accent); }
+  input::placeholder { color:var(--muted); opacity:.5; }
+  .btn { padding:10px 20px; border-radius:7px; border:none; cursor:pointer; font-size:14px; font-weight:600; transition:all .2s; display:inline-flex; align-items:center; gap:6px; text-decoration:none; white-space:nowrap; }
+  .btn-primary { background:var(--accent); color:#07100f; }
+  .btn-primary:hover { background:#09ceca; transform:translateY(-1px); }
+  .btn-secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  .btn-secondary:hover { background:rgba(10,186,181,.1); }
+  .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--border); }
+  .btn-ghost:hover { color:var(--text); }
+  .btn-danger { background:transparent; color:var(--danger); border:1px solid rgba(224,92,92,.4); }
+  .btn-danger:hover { background:rgba(224,92,92,.1); border-color:var(--danger); }
+  .btn-sm { padding:5px 11px; font-size:12px; border-radius:6px; }
+  .btn-full { width:100%; justify-content:center; }
+  header { background:var(--card); border-bottom:1px solid var(--border); padding:13px 24px; display:flex; align-items:center; justify-content:space-between; }
+  header .logo { font-size:16px; font-weight:700; color:var(--accent); }
+  header .dl-badge { font-size:11px; color:var(--muted); background:var(--bg); border:1px solid var(--border); padding:4px 10px; border-radius:100px; }
+  .tabs { display:flex; background:var(--card); border-bottom:1px solid var(--border); padding:0 20px; overflow-x:auto; }
+  .tab { padding:12px 16px; cursor:pointer; border-bottom:2px solid transparent; color:var(--muted); font-size:13px; font-weight:500; transition:all .2s; white-space:nowrap; }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab:hover:not(.active) { color:var(--text); }
+  .content { display:none; padding:24px; max-width:980px; margin:0 auto; }
+  .content.active { display:block; }
+  .g2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+  .progress-bar { background:var(--border); border-radius:100px; height:5px; margin-top:10px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),#5ce0d0); border-radius:100px; transition:width .6s ease; }
+  .nav-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .nav-row:last-child { border-bottom:none; }
+  .nav-name { flex:1; font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nav-units { font-size:12px; color:var(--muted); white-space:nowrap; }
+  .nav-input { width:130px !important; flex-shrink:0; }
+  .nav-unit-label { font-size:11px; color:var(--muted); white-space:nowrap; }
+  .fund-search-wrap { position:relative; }
+  .fund-dd { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--card); border:1px solid var(--accent); border-radius:8px; max-height:260px; overflow-y:auto; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,.5); }
+  .fund-dd .dd-item { padding:10px 14px; cursor:pointer; transition:background .15s; border-bottom:1px solid var(--border); }
+  .fund-dd .dd-item:last-child { border-bottom:none; }
+  .fund-dd .dd-item:hover { background:rgba(10,186,181,.12); }
+  .fund-dd .dd-name { font-size:13px; font-weight:500; }
+  .fund-dd .dd-code { font-size:11px; color:var(--muted); margin-top:2px; }
+  .fund-dd .dd-add { color:var(--accent); font-style:italic; }
+  .fund-dd .dd-empty { padding:14px; font-size:13px; color:var(--muted); text-align:center; }
+  .trust-block { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:10px; }
+  .trust-block-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .trust-block-hdr .fname { font-size:13px; font-weight:600; color:var(--accent); }
+  .badge { display:inline-block; padding:2px 9px; border-radius:100px; font-size:11px; font-weight:600; margin:1px 2px; }
+  .badge-cash { background:rgba(10,186,181,.15); color:var(--accent); }
+  .badge-trust { background:rgba(224,168,92,.15); color:var(--warning); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  td { padding:10px 12px; border-bottom:1px solid rgba(26,51,48,.5); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(26,51,48,.3); }
+  .empty-state { text-align:center; padding:52px 20px; color:var(--muted); }
+  .empty-state .es-icon { font-size:36px; margin-bottom:10px; opacity:.3; }
+  .section-title { font-size:15px; font-weight:700; margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+  .divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
+  .hint { font-size:11px; color:var(--muted); margin-top:6px; }
+  .flash { animation:fl .6s ease; }
+  @keyframes fl { 0%,100%{opacity:1} 40%{opacity:.2} }
+  /* 銘柄カード */
+  .fund-card { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:14px; }
+  .fund-card-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+  .fund-card-hdr .fc-name { font-size:15px; font-weight:700; flex:1; margin-right:12px; }
+  .fund-card-hdr .fc-code { font-size:11px; color:var(--muted); margin-top:3px; }
+  .fund-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .fund-stat { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+  .fund-stat .fs-label { font-size:11px; color:var(--muted); margin-bottom:4px; }
+  .fund-stat .fs-value { font-size:16px; font-weight:700; }
+  .fund-stat .fs-value.accent { color:var(--accent); }
+  .fund-stat .fs-value.warning { color:var(--warning); }
+  .fund-stat .fs-value.muted { color:var(--muted); font-size:13px; }
+  .fund-stat .fs-sub { font-size:11px; color:var(--muted); margin-top:3px; }
+  .fund-nav-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--border); }
+  .fund-nav-info { flex:1; min-width:180px; }
+  .fund-nav-info .fn-label { font-size:11px; color:var(--muted); margin-bottom:2px; }
+  .fund-nav-info .fn-value { font-size:18px; font-weight:700; color:var(--warning); }
+  .fund-nav-info .fn-date { font-size:11px; color:var(--muted); margin-top:2px; }
+  .fund-valuation { text-align:right; }
+  .fund-valuation .fv-label { font-size:11px; color:var(--muted); margin-bottom:2px; }
+  .fund-valuation .fv-value { font-size:20px; font-weight:700; color:var(--success); }
+  .fund-nav-actions { display:flex; gap:8px; flex-direction:column; }
+  .orig-units-wrap { display:flex; align-items:center; gap:8px; }
+  .orig-units-wrap input { width:120px !important; }
+  .nav-fetch-status { font-size:12px; margin-top:4px; }
+  .nav-fetch-status.loading { color:var(--muted); }
+  .nav-fetch-status.ok { color:var(--success); }
+  .nav-fetch-status.err { color:var(--warning); }
+  /* モーダル */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:500; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .modal-box { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; width:100%; max-width:420px; }
+  .modal-box h3 { font-size:16px; margin-bottom:14px; }
+  @media(max-width:640px) {
+  .g2,.g3,.fund-stats { grid-template-columns:1fr }
+  .content { padding:12px }
+  .card { padding:14px }
+  .nav { overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; gap:2px; }
+  .nav-btn { padding:8px 12px; font-size:12px; flex-shrink:0; }
+  .card-value { font-size:22px }
+  .section-title { font-size:14px }
+  table { font-size:12px }
+  th, td { padding:7px 8px }
+  .modal-box { width:94vw; padding:18px; }
+  .fund-card { padding:14px }
+  .trust-block { padding:12px }
+  header h1 { font-size:15px }
+  header { padding:10px 14px }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<!-- 初期設定 -->
+<div id="setup" style="display:none;">
+  <div class="setup-box">
+    <div class="setup-logo"><span class="icon">💰</span><h1>借金返済管理ツール</h1><p>現金・投資信託での返済を一元管理します</p></div>
+    <div class="setup-steps"><div class="setup-step active" id="dot1"></div><div class="setup-step" id="dot2"></div></div>
+    <div id="step1">
+      <div class="card">
+        <div class="card-title">借入情報を入力</div>
+        <div class="form-group"><label>借入総額（円）</label><input type="number" id="s-total" placeholder="例：2000000" min="1" /></div>
+        <div class="form-group"><label>返済期限</label><input type="date" id="s-deadline" value="2030-08-12" /></div>
+        <div class="form-group"><label>メモ（任意）</label><input type="text" id="s-note" placeholder="例：〇〇への借入" /></div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="setupNext()">次へ →</button>
+    </div>
+    <div id="step2" style="display:none;">
+      <div class="card">
+        <div class="card-title">返済に使う投資信託銘柄を登録（任意）</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">銘柄名で検索して追加できます。後からでも変更できます。</p>
+        <div class="form-group"><label>銘柄を検索して追加</label>
+          <div class="fund-search-wrap">
+            <input type="text" id="sf-search" placeholder="銘柄名またはコードで検索..." oninput="fundSearch('sf-search','sf-dd','setup')" onkeydown="fundKey(event,'sf-dd')" autocomplete="off" />
+            <div class="fund-dd" id="sf-dd" style="display:none;"></div>
+          </div>
+        </div>
+        <div id="sf-added"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="setupBack()">← 戻る</button>
+        <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveSetup()">設定を完了して開始</button>
+      </div>
+      <p class="hint" style="text-align:center;margin-top:10px;">銘柄は後からでも追加できます。スキップしてもOKです。</p>
+    </div>
+  </div>
+</div>
+
+<!-- メインアプリ -->
+<div id="app" style="display:none;">
+  <div id="readonly-banner" style="display:none;background:rgba(224,168,92,.15);border-bottom:1px solid rgba(224,168,92,.4);padding:10px 16px;text-align:center;font-size:13px;color:var(--warning);">
+    👁 閲覧専用モード — このページは編集できません
+  </div>
+  <header><span class="logo">借金返済管理</span><span class="dl-badge">返済期限 2030/8/12</span></header>
+  <div class="tabs">
+    <div class="tab active" data-tab="overview" onclick="switchTab(this)">概要</div>
+    <div class="tab" data-tab="payment" onclick="switchTab(this)">返済入力</div>
+    <div class="tab" data-tab="trust" onclick="switchTab(this)">投資信託</div>
+    <div class="tab" data-tab="history" onclick="switchTab(this)">返済履歴</div>
+    <div class="tab" data-tab="settings" onclick="switchTab(this)">設定</div>
+  </div>
+
+  <!-- 概要 -->
+  <div id="tab-overview" class="content active">
+    <div class="g3" style="margin-bottom:14px;">
+      <div class="card"><div class="card-title">残返済額</div><div class="card-value danger" id="ov-rem">—</div><div class="card-sub" id="ov-pct"></div><div class="progress-bar"><div class="progress-fill" id="ov-bar" style="width:0%"></div></div></div>
+      <div class="card"><div class="card-title">今月の最低返済額</div><div class="card-value accent" id="ov-monthly">—</div><div class="card-sub" id="ov-monthly-sub"></div></div>
+      <div class="card"><div class="card-title">残り月数</div><div class="card-value" id="ov-months">—</div><div class="card-sub">2030年8月12日まで</div></div>
+    </div>
+    <div class="g2" style="margin-bottom:14px;">
+      <div class="card"><div class="card-title">累計現金返済額</div><div class="card-value" id="ov-cash">—</div></div>
+      <div class="card"><div class="card-title">投資信託現在評価額</div><div class="card-value warning" id="ov-trust">—</div><div class="card-sub" id="ov-trust-sub"></div><div class="card-sub" id="ov-pending" style="margin-top:4px;color:var(--warning);"></div></div>
+    </div>
+    <div class="g2" style="margin-bottom:14px;">
+      <div class="card">
+        <div class="card-title">残返済額の内訳</div>
+        <div style="position:relative;max-width:240px;margin:0 auto;">
+          <canvas id="chart-doughnut"></canvas>
+          <div id="chart-center-label" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+            <div style="font-size:11px;color:var(--muted)">残返済額</div>
+            <div id="chart-center-value" style="font-size:16px;font-weight:700;color:var(--danger)">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">返済見通し（月次）</div>
+        <canvas id="chart-line"></canvas>
+      </div>
+    </div>
+    <div style="text-align:right;margin-bottom:14px;">
+      <button class="btn btn-primary btn-sm" onclick="recalc()">再計算</button>
+      <span style="font-size:11px;color:var(--muted);margin-left:8px;">基準価額の更新は「設定」タブから</span>
+    </div>
+  </div>
+
+  <!-- 返済入力 -->
+  <div id="tab-payment" class="content">
+    <div class="card">
+      <div class="section-title">返済を記録する</div>
+      <div class="g2">
+        <div class="form-group"><label>返済日</label><input type="date" id="pay-date" /></div>
+        <div class="form-group"><label>現金返済額（円）</label><input type="number" id="pay-cash" placeholder="0" min="0" oninput="payPreview()" /></div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:13px;font-weight:600;color:var(--muted);">投資信託購入（任意）</span>
+          <button class="btn btn-secondary btn-sm" onclick="toggleFundSearch()">＋ 銘柄を追加</button>
+        </div>
+        <div id="pay-search-area" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="pf-select" style="flex:1;padding:8px 10px;background:#0e1f1d;border:1px solid #1a3330;border-radius:6px;color:#e0f0ef;font-size:13px;">
+              <option value="" style="background:#0e1f1d;color:#e0f0ef;">-- 銘柄を選択 --</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="addFromSelect()">追加</button>
+          </div>
+          <p id="pf-no-funds" style="display:none;font-size:12px;color:var(--muted);margin:8px 0 0;">投資信託タブで銘柄を先に登録してください</p>
+        </div>
+        <div id="pay-blocks"></div>
+      </div>
+      <div class="form-group"><label>メモ（任意）</label><input type="text" id="pay-note" placeholder="補足など" /></div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="savePayment()">この返済を保存</button>
+        <span id="pay-preview" style="font-size:13px;color:var(--muted);"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 投資信託 -->
+  <div id="tab-trust" class="content">
+    <div class="card">
+      <div class="section-title">銘柄を追加</div>
+      <div class="form-group"><label>銘柄を検索して追加</label>
+        <div class="fund-search-wrap">
+          <input type="text" id="tf-search" placeholder="銘柄名またはコードで検索..." oninput="fundSearch('tf-search','tf-dd','trust')" onkeydown="fundKey(event,'tf-dd')" autocomplete="off" />
+          <div class="fund-dd" id="tf-dd" style="display:none;"></div>
+        </div>
+        <p class="hint">一覧にない場合は銘柄名を入力してEnterで手動追加できます</p>
+      </div>
+    </div>
+    <div id="trust-cards"></div>
+  </div>
+
+  <!-- 返済履歴 -->
+  <div id="tab-history" class="content">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table><thead><tr><th>日付</th><th>現金返済</th><th>投資信託購入</th><th>合計</th><th>メモ</th><th></th></tr></thead>
+      <tbody id="hist-body"></tbody></table>
+      </div>
+      <div id="hist-empty" class="empty-state"><div class="es-icon">📋</div><p>まだ返済記録がありません</p></div>
+    </div>
+  </div>
+
+  <!-- 設定 -->
+  <div id="tab-settings" class="content">
+    <div class="card">
+      <div class="section-title">基本設定</div>
+      <div class="form-group"><label>借入総額（円）</label><input type="number" id="cfg-total" /></div>
+      <div class="form-group"><label>返済期限</label><input type="date" id="cfg-dl" /></div>
+      <div class="form-group"><label>メモ</label><input type="text" id="cfg-note" /></div>
+      <button class="btn btn-primary" onclick="saveConfig()">設定を保存</button>
+    </div>
+    <div class="card">
+      <div class="section-title">基準価額の更新</div>
+      <div id="cfg-nav-list"><p style="font-size:13px;color:var(--muted)">投資信託タブで銘柄を登録してください</p></div>
+      <hr class="divider">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary" onclick="recalc()">再計算して概要に反映</button>
+        <a href="https://www.rakuten-sec.co.jp/web/fund/search/" target="_blank" class="btn btn-secondary">楽天証券でファンドを確認</a>
+      </div>
+      <p class="hint" style="margin-top:8px;">基準価額は「円/1万口」で入力してください（楽天証券の表示単位）</p>
+    </div>
+    <div class="card">
+      <div class="section-title">🔗 閲覧専用URLで共有</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">現在のデータをURLに埋め込んで共有できます。受け取った人は<strong>閲覧のみ</strong>可能です。</p>
+      <button class="btn btn-primary" onclick="generateShareUrl()">📤 共有URLを生成してコピー</button>
+    </div>
+    <div class="card">
+      <div class="section-title">📊 スプレッドシートにエクスポート</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">各ボタンでデータをコピー → Google スプレッドシートの対応シートに貼り付け（Ctrl+V）してください。</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="copyOverview()">📋 概要をコピー</button>
+        <button class="btn btn-secondary" onclick="copyTrust()">📋 投資信託をコピー</button>
+        <button class="btn btn-secondary" onclick="copyHistory()">📋 返済履歴をコピー</button>
+      </div>
+      <p id="export-msg" style="font-size:12px;color:var(--success);margin-top:8px;display:none;"></p>
+    </div>
+    <div class="card">
+      <div class="section-title">データ管理</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="exportJson()">JSONでエクスポート</button>
+        <button class="btn btn-danger" onclick="resetAll()">全データをリセット</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 基準価額手動入力モーダル -->
+<div class="modal-overlay" id="nav-modal" style="display:none;" onclick="if(event.target===this)closeNavModal()">
+  <div class="modal-box">
+    <h3>基準価額を手動で入力</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;" id="nav-modal-desc"></p>
+    <div class="form-group">
+      <label>基準価額（円/1万口）</label>
+      <input type="number" id="nav-modal-input" placeholder="例：314482" min="0" />
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <a id="nav-modal-link" href="#" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">楽天証券で確認</a>
+      <div style="flex:1;"></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeNavModal()">キャンセル</button>
+      <button class="btn btn-primary btn-sm" onclick="submitNavModal()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 口数確定モーダル -->
+<div class="modal-overlay" id="units-modal" style="display:none;" onclick="if(event.target===this)closeUnitsModal()">
+  <div class="modal-box">
+    <h3>口数を確定する</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;" id="units-modal-desc"></p>
+    <div class="form-group">
+      <label>購入口数</label>
+      <input type="number" id="units-modal-u" placeholder="例：12345" min="0" step="1" />
+    </div>
+    <div class="form-group">
+      <label>基準価額（円/1万口、任意）</label>
+      <input type="number" id="units-modal-n" placeholder="例：314482" min="0" />
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <div style="flex:1;"></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeUnitsModal()">キャンセル</button>
+      <button class="btn btn-primary btn-sm" onclick="submitUnitsModal()">確定して保存</button>
+    </div>
+  </div>
+</div>
+<script>
+const FUNDS_DB = [
+  {n:"eMAXIS Slim 全世界株式（オール・カントリー）",c:"0331418A"},
+  {n:"eMAXIS Slim 米国株式（S&P500）",c:"0331120C"},
+  {n:"eMAXIS Slim 先進国株式インデックス",c:"03311187"},
+  {n:"eMAXIS Slim 新興国株式インデックス",c:"03311188"},
+  {n:"eMAXIS Slim 国内株式（日経平均）",c:"03311183"},
+  {n:"eMAXIS Slim 国内株式（TOPIX）",c:"03311182"},
+  {n:"eMAXIS Slim バランス（8資産均等型）",c:"03311189"},
+  {n:"eMAXIS Slim 先進国債券インデックス",c:"03311181"},
+  {n:"eMAXIS Slim 国内債券インデックス",c:"03311180"},
+  {n:"eMAXIS Slim 先進国リートインデックス",c:"03311186"},
+  {n:"eMAXIS Slim 全世界株式（除く日本）",c:"0331418B"},
+  {n:"SBI・V・S&P500インデックス・ファンド",c:"89311218"},
+  {n:"SBI・V・全米株式インデックス・ファンド",c:"89311199"},
+  {n:"SBI・V・全世界株式インデックス・ファンド",c:"89311214"},
+  {n:"SBI・V・米国高配当株式インデックス・ファンド",c:"89311215"},
+  {n:"楽天・全世界株式インデックス・ファンド",c:"9I311179"},
+  {n:"楽天・全米株式インデックス・ファンド",c:"9I31119F"},
+  {n:"楽天・インデックス・バランス・ファンド（均等型）",c:"9I31120D"},
+  {n:"楽天・米国高配当株式インデックス・ファンド",c:"9I312188"},
+  {n:"楽天・先進国株式インデックス・ファンド",c:"9I311197"},
+  {n:"ニッセイ 外国株式インデックスファンド",c:"2931113C"},
+  {n:"ニッセイ TOPIXインデックスファンド",c:"29311140"},
+  {n:"ニッセイ 日経平均インデックスファンド",c:"29311141"},
+  {n:"ひふみプラス",c:"9C31108A"},
+  {n:"ひふみワールド＋",c:"9C311199"},
+  {n:"たわらノーロード 先進国株式",c:"4731108B"},
+  {n:"たわらノーロード 全世界株式",c:"4731121B"},
+  {n:"たわらノーロード 国内株式（日経225）",c:"4731108A"},
+  {n:"MAXIS全世界株式（オール・カントリー）上場投信",c:"2559"},
+  {n:"MAXIS米国株式（S&P500）上場投信",c:"2558"},
+  {n:"バンガード・S&P500ETF（VOO）",c:"VOO"},
+  {n:"バンガード・トータル・ワールド・ストックETF（VT）",c:"VT"},
+  {n:"iシェアーズ・コア S&P 500 ETF（IVV）",c:"IVV"},
+];
+
+const LSKEY = "debt-mgr-v3";
+let db = {config:{totalDebt:0,deadline:"2030-08-12",note:""},payments:[],funds:[]};
+function dbLoad(){try{const s=localStorage.getItem(LSKEY);if(s)db=JSON.parse(s);}catch(e){}}
+function dbSave(){localStorage.setItem(LSKEY,JSON.stringify(db));}
+
+// ============ 共有URL / 閲覧専用モード ============
+let isReadOnly = false;
+
+function initShareMode() {
+  const hash = location.hash;
+  if (!hash.startsWith('#share=')) return false;
+  try {
+    const encoded = hash.slice(7);
+    const json = decodeURIComponent(escape(atob(encoded)));
+    db = JSON.parse(json);
+    isReadOnly = true;
+    return true;
+  } catch(e) {
+    console.error('share decode error', e);
+    return false;
+  }
+}
+
+function applyReadOnly() {
+  if (!isReadOnly) return;
+  document.getElementById('readonly-banner').style.display = 'block';
+  // 返済入力・設定タブを非表示
+  ['btn-payment','btn-settings'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // 編集・削除ボタンを無効化
+  document.querySelectorAll('.btn-danger, .btn-primary:not(#ro-ok)').forEach(b => {
+    if (!b.closest('#readonly-banner')) { b.disabled = true; b.style.opacity = '0.3'; b.style.cursor = 'default'; }
+  });
+}
+
+function generateShareUrl() {
+  try {
+    const json = JSON.stringify(db);
+    const encoded = btoa(unescape(encodeURIComponent(json)));
+    const base = location.href.split('#')[0];
+    const url = base + '#share=' + encoded;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('共有URLをコピーしました！\nLINEやメールで送ってください。\n（相手は閲覧のみ可能です）');
+    }).catch(() => {
+      prompt('このURLをコピーして送ってください：', url);
+    });
+  } catch(e) {
+    alert('URL生成エラー: ' + e.message);
+  }
+}
+
+function init(){
+  // 共有URLモード検出
+  if (initShareMode()) {
+    document.getElementById('app').style.display = 'block';
+    renderAll();
+    setTimeout(applyReadOnly, 50);
+    return;
+  }
+  // v2からのマイグレーション
+  const old=localStorage.getItem("debt-mgr-v2");
+  if(old && !localStorage.getItem(LSKEY)){
+    try{const o=JSON.parse(old);o.funds=o.funds.map(f=>({...f,originalUnits:f.originalUnits||0}));localStorage.setItem(LSKEY,JSON.stringify(o));}catch(e){}
+  }
+  dbLoad();
+  document.addEventListener("click",e=>{if(!e.target.closest(".fund-search-wrap"))document.querySelectorAll(".fund-dd").forEach(d=>d.style.display="none");});
+  if(!db.config.totalDebt){document.getElementById("setup").style.display="flex";}
+  else{document.getElementById("app").style.display="block";renderAll();}
+}
+
+// セットアップ
+let sfFunds=[];
+function setupNext(){const t=parseFloat(document.getElementById("s-total").value);if(!t||t<=0){alert("借入総額を入力してください");return;}document.getElementById("step1").style.display="none";document.getElementById("step2").style.display="block";document.getElementById("dot1").classList.remove("active");document.getElementById("dot2").classList.add("active");}
+function setupBack(){document.getElementById("step2").style.display="none";document.getElementById("step1").style.display="block";document.getElementById("dot2").classList.remove("active");document.getElementById("dot1").classList.add("active");}
+function saveSetup(){
+  const t=parseFloat(document.getElementById("s-total").value);
+  db.config={totalDebt:t,deadline:document.getElementById("s-deadline").value||"2030-08-12",note:document.getElementById("s-note").value};
+  sfFunds.forEach(f=>{if(!db.funds.find(x=>x.name===f.n))db.funds.push({id:Date.now()+""+Math.random(),name:f.n,code:f.c||"",currentNav:0,navUpdatedAt:null,originalUnits:0});});
+  dbSave();document.getElementById("setup").style.display="none";document.getElementById("app").style.display="block";renderAll();
+}
+function addToSetup(f){if(sfFunds.find(x=>x.n===f.n))return;sfFunds.push(f);renderSfAdded();}
+function renderSfAdded(){const el=document.getElementById("sf-added");el.innerHTML=sfFunds.map((f,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13px;font-weight:600">${esc(f.n)}</div>${f.c?`<div style="font-size:11px;color:var(--muted)">${f.c}</div>`:""}</div><button class="btn btn-danger btn-sm" onclick="sfFunds.splice(${i},1);renderSfAdded()">削除</button></div>`).join("");}
+
+// ファンド検索
+let _sr=[];
+function fundSearch(inpId,ddId,ctx){
+  const q=document.getElementById(inpId).value.trim().toLowerCase();
+  const dd=document.getElementById(ddId);
+  if(!q){dd.style.display="none";return;}
+  _sr=FUNDS_DB.filter(f=>f.n.toLowerCase().includes(q)||f.c.toLowerCase().includes(q)).slice(0,12);
+  const rawQ=document.getElementById(inpId).value.trim();
+  let html="";
+  if(_sr.length===0){html=`<div class="dd-item dd-add" onclick="fundCustom('${inpId}','${ddId}','${ctx}')">＋「${esc(rawQ)}」を手動で追加</div>`;}
+  else{_sr.forEach((f,i)=>{html+=`<div class="dd-item" onclick="fundPick(${i},'${inpId}','${ddId}','${ctx}')"><div class="dd-name">${esc(f.n)}</div><div class="dd-code">${f.c}</div></div>`;});html+=`<div class="dd-item dd-add" onclick="fundCustom('${inpId}','${ddId}','${ctx}')">＋「${esc(rawQ)}」を手動で追加</div>`;}
+  dd.innerHTML=html;dd.style.display="block";
+}
+function fundKey(e,ddId){if(e.key==="Enter"){e.preventDefault();const f=document.getElementById(ddId).querySelector(".dd-item");if(f)f.click();}if(e.key==="Escape")document.getElementById(ddId).style.display="none";}
+function fundPick(i,inpId,ddId,ctx){const f=_sr[i];document.getElementById(inpId).value="";document.getElementById(ddId).style.display="none";applyFund(f,ctx);}
+function fundCustom(inpId,ddId,ctx){const name=document.getElementById(inpId).value.trim();if(!name)return;document.getElementById(inpId).value="";document.getElementById(ddId).style.display="none";applyFund({n:name,c:""},ctx);}
+function applyFund(f,ctx){if(ctx==="setup")addToSetup(f);else if(ctx==="trust")addToRegistry(f);else if(ctx==="payment")addToPayment(f);}
+
+// タブ
+function switchTab(el){document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));document.querySelectorAll(".content").forEach(c=>c.classList.remove("active"));el.classList.add("active");document.getElementById("tab-"+el.dataset.tab).classList.add("active");renderAll();}
+
+// ============ 投資信託タブ ============
+function addToRegistry(f){
+  if(db.funds.find(x=>x.name===f.n)){alert(`「${f.n}」はすでに登録されています`);return;}
+  db.funds.push({id:Date.now().toString(),name:f.n,code:f.c||"",currentNav:0,navUpdatedAt:null,originalUnits:0});
+  dbSave();document.getElementById("tf-search").value="";
+  renderTrustCards();renderAll();
+}
+function delFund(id){if(!confirm("この銘柄を削除しますか？"))return;db.funds=db.funds.filter(f=>f.id!==id);dbSave();renderTrustCards();renderAll();}
+function setOrigUnits(id,val){const f=db.funds.find(x=>x.id===id);if(f){f.originalUnits=parseFloat(val)||0;dbSave();renderTrustCards();renderAll();}}
+
+function renderTrustCards(){
+  const el=document.getElementById("trust-cards");
+  if(!db.funds.length){el.innerHTML=`<div class="empty-state"><div class="es-icon">📊</div><p>上の検索から銘柄を登録してください</p></div>`;return;}
+  const pm=unitMap();
+  el.innerHTML=db.funds.map(f=>{
+    const repaid=pm[f.id]||0;
+    const orig=f.originalUnits||0;
+    const remaining=Math.max(0,orig-repaid);
+    const val=f.currentNav>0?yen(remaining*f.currentNav/10000):"—";
+    const navDateStr=f.navUpdatedAt?`算出日: ${f.navUpdatedAt}`:"未取得";
+    const navStr=f.currentNav>0?`${f.currentNav.toLocaleString()} 円/万口`:"—";
+    const rakutenUrl=f.code?`https://www.rakuten-sec.co.jp/web/fund/detail/?ID=${f.code}`:`https://www.rakuten-sec.co.jp/web/fund/search/`;
+    const progressPct=orig>0?Math.min(100,repaid/orig*100):0;
+    return `<div class="fund-card">
+      <div class="fund-card-hdr">
+        <div>
+          <div class="fc-name">📈 ${esc(f.name)}</div>
+          ${f.code?`<div class="fc-code">コード: ${f.code}</div>`:""}
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="delFund('${f.id}')">削除</button>
+      </div>
+      <div class="fund-stats">
+        <div class="fund-stat">
+          <div class="fs-label">返済済み口数</div>
+          <div class="fs-value accent">${repaid.toLocaleString()} 口</div>
+          ${orig>0?`<div class="fs-sub" style="margin-top:4px"><div style="background:var(--border);border-radius:100px;height:4px;overflow:hidden;width:100%"><div style="height:100%;background:var(--accent);width:${progressPct}%"></div></div><span style="font-size:10px;color:var(--muted)">${progressPct.toFixed(1)}%</span></div>`:""}
+        </div>
+        <div class="fund-stat">
+          <div class="fs-label">元の口数</div>
+          <div class="orig-units-wrap">
+            <input type="number" value="${orig||""}" placeholder="例：10000" min="0"
+              style="width:100px!important;font-size:14px;"
+              onchange="setOrigUnits('${f.id}',this.value)" />
+            <span style="font-size:12px;color:var(--muted)">口</span>
+          </div>
+          ${orig>0?`<div class="fs-sub">${repaid.toLocaleString()} / ${orig.toLocaleString()} 口</div>`:`<div class="fs-sub muted">入力してください</div>`}
+        </div>
+        <div class="fund-stat">
+          <div class="fs-label">残口数</div>
+          <div class="fs-value ${remaining>0?'warning':'muted'}">${orig>0?remaining.toLocaleString()+"口":"—"}</div>
+          ${orig>0?`<div class="fs-sub">元の口数 − 返済済み</div>`:""}
+        </div>
+      </div>
+      <div class="fund-nav-row">
+        <div class="fund-nav-info">
+          <div class="fn-label">基準価額</div>
+          <div class="fn-value">${navStr}</div>
+          <div class="fn-date">${navDateStr}</div>
+        </div>
+        <div class="fund-valuation">
+          <div class="fv-label">残口数の時価金額</div>
+          <div class="fv-value">${val}</div>
+        </div>
+        <div class="fund-nav-actions">
+          <button class="btn btn-primary btn-sm" id="fetch-btn-${f.id}" onclick="triggerNavFetch('${f.id}')">基準価額を取得</button>
+          <div class="nav-fetch-status" id="fetch-status-${f.id}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// NAVフェッチ
+let _navModalFundId=null;
+async function triggerNavFetch(fundId){
+  const fund=db.funds.find(f=>f.id===fundId);
+  if(!fund)return;
+  const btn=document.getElementById("fetch-btn-"+fundId);
+  const status=document.getElementById("fetch-status-"+fundId);
+  if(!fund.code){openNavModal(fundId);return;}
+  // 自動取得を試みる
+  btn.textContent="取得中...";btn.disabled=true;
+  if(status)status.textContent="";
+  try{
+    const nav=await autoFetchNav(fund.code);
+    if(nav&&nav>100){
+      fund.currentNav=nav;fund.navUpdatedAt=new Date().toISOString().split("T")[0];
+      dbSave();renderTrustCards();renderAll();
+      if(status){status.textContent="✓ 取得成功";status.className="nav-fetch-status ok";}
+      return;
+    }
+  }catch(e){}
+  btn.textContent="基準価額を取得";btn.disabled=false;
+  if(status){status.textContent="自動取得できませんでした";status.className="nav-fetch-status err";}
+  openNavModal(fundId);
+}
+
+async function autoFetchNav(code){
+  if(!code) return null;
+  // 取得先URL（minkabu優先、Yahoo Financeをフォールバック）
+  const sources = [
+    `https://itf.minkabu.jp/fund/${code}`,
+    `https://info.finance.yahoo.co.jp/fund/detail/overview/${code}/`,
+    `https://minkabu.jp/stock/${code}`,
+  ];
+  // CORSプロキシ（複数用意して耐障害性を上げる）
+  const proxies = [
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ];
+  // 全組み合わせを並列で投げ、最初に成功したものを採用
+  const attempts = [];
+  for(const src of sources){
+    for(const mkProxy of proxies){
+      attempts.push(_fetchParseNav(mkProxy(src)));
+    }
+  }
+  try { return await Promise.any(attempts); } catch(e) { return null; }
+}
+
+async function _fetchParseNav(proxyUrl){
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),9000);
+  try{
+    const resp=await fetch(proxyUrl,{signal:ctrl.signal});
+    clearTimeout(timer);
+    if(!resp.ok) throw new Error("http_err");
+    const text=await resp.text();
+    // 複数のパターンで基準価額を探す
+    const patterns=[
+      // minkabu: JSONデータ or spanタグ
+      /"(?:price|nav|basicPrice|base_price)"\s*:\s*"?([\d,]+(?:\.\d+)?)"?/i,
+      /class="[^"]*(?:price|nav|hd_val)[^"]*"[^>]*>\s*([\d,]+(?:\.\d+)?)/i,
+      // Yahoo Finance Japan: tdタグ内の数値
+      /<td[^>]*class="[^"]*num[^"]*"[^>]*>\s*([\d,]+(?:\.\d+)?)/i,
+      // 「基準価額」直後の数値（汎用）
+      /基準価額[^\d<]{0,30}([\d]{3,6}(?:,[\d]{3})*(?:\.\d+)?)/,
+      // 大きい数値の前後に円がある
+      /([\d]{3,6}(?:,[\d]{3})*)\s*円\/万口/,
+    ];
+    for(const p of patterns){
+      const m=text.match(p);
+      if(m){
+        const v=parseFloat(m[1].replace(/,/g,""));
+        // 合理的なNAV範囲: 100〜9,999,999
+        if(v>=100 && v<10000000) return v;
+      }
+    }
+    throw new Error("no_nav");
+  }catch(e){
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
+function openNavModal(fundId){
+  const fund=db.funds.find(f=>f.id===fundId);
+  if(!fund)return;
+  _navModalFundId=fundId;
+  document.getElementById("nav-modal-desc").textContent=`「${fund.name}」の基準価額を入力してください`;
+  document.getElementById("nav-modal-input").value=fund.currentNav||"";
+  const url=fund.code?`https://www.rakuten-sec.co.jp/web/fund/detail/?ID=${fund.code}`:`https://www.rakuten-sec.co.jp/web/fund/search/`;
+  document.getElementById("nav-modal-link").href=url;
+  document.getElementById("nav-modal").style.display="flex";
+  setTimeout(()=>document.getElementById("nav-modal-input").focus(),100);
+}
+function closeNavModal(){document.getElementById("nav-modal").style.display="none";_navModalFundId=null;}
+function submitNavModal(){
+  const val=parseFloat(document.getElementById("nav-modal-input").value);
+  if(!val||val<=0){alert("基準価額を入力してください");return;}
+  const fund=db.funds.find(f=>f.id===_navModalFundId);
+  if(fund){fund.currentNav=val;fund.navUpdatedAt=new Date().toISOString().split("T")[0];dbSave();}
+  closeNavModal();renderTrustCards();renderAll();
+}
+
+// ============ 返済入力タブ ============
+let payBlocks=[];
+function renderPaymentTab(){if(!document.getElementById("pay-date").value)document.getElementById("pay-date").value=new Date().toISOString().split("T")[0];payPreview();}
+function toggleFundSearch(){
+  const a=document.getElementById("pay-search-area");
+  const isOpen=a.style.display==="none";
+  a.style.display=isOpen?"block":"none";
+  if(isOpen){
+    const sel=document.getElementById("pf-select");
+    sel.innerHTML='<option value="">-- 銘柄を選択 --</option>';
+    const noFunds=document.getElementById("pf-no-funds");
+    if(db.funds.length===0){
+      noFunds.style.display="block";
+    } else {
+      noFunds.style.display="none";
+      db.funds.forEach(f=>{
+        if(!payBlocks.find(b=>b.fid===f.id)){
+          const o=document.createElement("option");
+          o.value=f.id; o.textContent=f.name; o.style.background='#0e1f1d'; o.style.color='#e0f0ef'; sel.appendChild(o);
+        }
+      });
+    }
+  }
+}
+function addToPayment(f){
+  let reg=db.funds.find(x=>x.name===f.n);
+  if(!reg){reg={id:Date.now().toString(),name:f.n,code:f.c||"",currentNav:0,navUpdatedAt:null,originalUnits:0};db.funds.push(reg);dbSave();}
+  if(payBlocks.find(b=>b.fid===reg.id)){alert(`「${f.n}」はすでに追加されています`);return;}
+  const bid="pb"+Date.now();payBlocks.push({bid,fid:reg.id,fname:reg.name});
+  renderPayBlocks();document.getElementById("pay-search-area").style.display="none";document.getElementById("pf-search").value="";
+}
+function addFromSelect(){
+  const sel=document.getElementById("pf-select");
+  const fid=sel.value;
+  if(!fid){alert("銘柄を選択してください");return;}
+  const f=db.funds.find(x=>x.id===fid);
+  if(!f){return;}
+  if(payBlocks.find(b=>b.fid===f.id)){alert(`「${f.name}」はすでに追加されています`);return;}
+  const bid="pb"+Date.now();
+  payBlocks.push({bid,fid:f.id,fname:f.name});
+  renderPayBlocks();
+  document.getElementById("pay-search-area").style.display="none";
+}
+
+function renderPayBlocks(){
+  const c=document.getElementById("pay-blocks");c.innerHTML="";
+  payBlocks.forEach(b=>{
+    const d=document.createElement("div");d.className="trust-block";d.id=b.bid;
+    d.innerHTML=`<div class="trust-block-hdr"><span class="fname">📈 ${esc(b.fname)}</span><button class="btn btn-danger btn-sm" onclick="rmBlock('${b.bid}')">削除</button></div>
+      <div class="g2">
+        <div class="form-group" style="margin-bottom:8px">
+          <label>充当金額（円）<span style="color:var(--danger);font-size:11px"> 必須</span></label>
+          <input type="number" id="${b.bid}-a" placeholder="例：50000" min="0" oninput="payPreview()" />
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label>口数<span style="color:var(--muted);font-size:10px">　後日でもOK</span></label>
+          <input type="number" id="${b.bid}-u" placeholder="後日入力可" min="0" oninput="blockCalcNav('${b.bid}')" />
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>基準価額（円/万口）<span style="color:var(--muted);font-size:10px">　後日でもOK</span></label>
+          <input type="number" id="${b.bid}-n" placeholder="後日入力可" min="0" oninput="blockCalcNav('${b.bid}')" />
+        </div>
+      </div>`;
+    c.appendChild(d);
+  });payPreview();
+}
+function rmBlock(bid){payBlocks=payBlocks.filter(b=>b.bid!==bid);renderPayBlocks();}
+function blockCalcNav(bid){
+  // 口数と基準価額が両方入力されたら充当金額を自動計算（ただし上書き可能）
+  const u=parseFloat(document.getElementById(bid+"-u").value)||0;
+  const n=parseFloat(document.getElementById(bid+"-n").value)||0;
+  if(u>0&&n>0) document.getElementById(bid+"-a").value=Math.round(u*n/10000);
+  payPreview();
+}
+function payPreview(){const cash=parseFloat(document.getElementById("pay-cash")?.value)||0;let t=cash;payBlocks.forEach(b=>{t+=parseFloat(document.getElementById(b.bid+"-a")?.value)||0;});const el=document.getElementById("pay-preview");if(el)el.textContent=t>0?`合計: ${yen(t)}`:""; }
+function savePayment(){
+  const date=document.getElementById("pay-date").value,cash=parseFloat(document.getElementById("pay-cash").value)||0,note=document.getElementById("pay-note").value;
+  if(!date){alert("返済日を入力してください");return;}
+  const tp=[];
+  payBlocks.forEach(b=>{
+    const uStr=document.getElementById(b.bid+"-u")?.value.trim();
+    const nStr=document.getElementById(b.bid+"-n")?.value.trim();
+    const u=uStr&&uStr!==''?parseFloat(uStr):null;
+    const n=nStr&&nStr!==''?parseFloat(nStr):null;
+    const a=parseFloat(document.getElementById(b.bid+"-a")?.value)||0;
+    if(a>0) tp.push({fundId:b.fid,fundName:b.fname,units:u,nav:n,amount:a,allocatedAmount:a});
+  });
+  if(cash===0&&tp.length===0){alert("現金返済額か投資信託充当金額のどちらかを入力してください");return;}
+  db.payments.push({id:Date.now().toString(),date,cashAmount:cash,trustPurchases:tp,note,createdAt:new Date().toISOString()});
+  dbSave();document.getElementById("pay-cash").value="";document.getElementById("pay-note").value="";document.getElementById("pay-blocks").innerHTML="";document.getElementById("pay-search-area").style.display="none";payBlocks=[];
+  alert("✅ 返済を記録しました");renderAll();
+}
+
+// ============ 概要タブ ============
+function renderOverview(){
+  const rem=remDebt(),mo=remMonths(),monthly=mo>0?rem/mo:rem;
+  const cash=totCash(),trust=trustVal(),paid=db.config.totalDebt-rem;
+  const pct=db.config.totalDebt>0?Math.min(100,paid/db.config.totalDebt*100):0;
+  const cashRem = Math.max(0, db.config.totalDebt - cash);
+  // 進捗: 現金返済済み / 借入総額
+  const cashPct = db.config.totalDebt > 0 ? Math.min(100, cash / db.config.totalDebt * 100) : 0;
+  document.getElementById("ov-rem").textContent=yen(rem);
+  document.getElementById("ov-pct").textContent=`現金残高 ${yen(cashRem)} ＋ 投資信託 ${yen(trust)}`;
+  document.getElementById("ov-bar").style.width=cashPct+"%";
+  document.getElementById("ov-monthly").textContent=yen(monthly);
+  document.getElementById("ov-monthly-sub").textContent=`残り${mo}ヶ月で完済するための最低額`;
+  document.getElementById("ov-months").textContent=mo+" ヶ月";
+  document.getElementById("ov-cash").textContent=yen(cash);
+  document.getElementById("ov-trust").textContent=yen(trust);
+  // 基準価額はv設定タブで管理
+  const s=db.funds.filter(f=>f.currentNav>0).length;
+  document.getElementById("ov-trust-sub").textContent=s>0?`${s}銘柄の基準価額を反映中（設定タブで更新）`:"設定タブで基準価額を入力してください";
+  const pending=pendingTrustAmount();
+  const pendEl=document.getElementById("ov-pending");
+  if(pendEl) pendEl.textContent=pending>0?`⚠ 口数未確定: ¥${Math.round(pending).toLocaleString()}（返済履歴から入力）`:"";
+}
+
+function pendingTrustAmount() {
+  let total = 0;
+  (db.payments || []).forEach(p => {
+    (p.trustPurchases || []).forEach(t => {
+      if (t.units == null) total += (t.allocatedAmount || t.amount || 0);
+    });
+  });
+  return total;
+}
+function setNav(id,v){const f=db.funds.find(x=>x.id===id);if(f)f.currentNav=parseFloat(v)||0;dbSave();}
+function recalc(){dbSave();renderOverview();const el=document.getElementById("ov-rem");el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash");}
+
+// ============ 返済履歴 ============
+function renderHistory(){
+  const tb=document.getElementById("hist-body"),em=document.getElementById("hist-empty");
+  if(!db.payments.length){tb.innerHTML="";em.style.display="block";return;}
+  em.style.display="none";
+  tb.innerHTML=[...db.payments].sort((a,b)=>b.date.localeCompare(a.date)).map(p=>{
+    const tt=(p.trustPurchases||[]).reduce((s,t)=>s+(t.amount||0),0),total=(p.cashAmount||0)+tt;
+    const badges=(p.trustPurchases||[]).map((t,ti)=>{
+      if(t.units){
+        return `<span class="badge badge-trust">${esc(t.fundName)} ${t.units.toLocaleString()}口</span>`;
+      } else {
+        return `<span class="badge" style="background:rgba(224,168,92,.2);color:var(--warning);cursor:pointer;border:1px solid rgba(224,168,92,.4)" onclick="openUnitsModal('${p.id}',${ti})" title="クリックして口数を入力">⚠ ${esc(t.fundName)} ¥${(t.allocatedAmount||t.amount||0).toLocaleString()} 口数未確定</span>`;
+      }
+    }).join("")||`<span style="color:var(--muted)">—</span>`;
+    return `<tr><td>${p.date}</td><td>${p.cashAmount>0?`<span class="badge badge-cash">${yen(p.cashAmount)}</span>`:`<span style="color:var(--muted)">—</span>`}</td><td>${badges}</td><td style="font-weight:700">${yen(total)}</td><td style="font-size:12px;color:var(--muted)">${esc(p.note||"")}</td><td><button class="btn btn-danger btn-sm" onclick="delPayment('${p.id}')">削除</button></td></tr>`;
+  }).join("");
+}
+function delPayment(id){if(!confirm("この返済記録を削除しますか？"))return;db.payments=db.payments.filter(p=>p.id!==id);dbSave();renderAll();}
+
+// ============ 設定 ============
+function renderSettings(){
+  document.getElementById("cfg-total").value=db.config.totalDebt;
+  document.getElementById("cfg-dl").value=db.config.deadline;
+  document.getElementById("cfg-note").value=db.config.note||"";
+  // 基準価額入力（設定タブ）
+  const nl=document.getElementById("cfg-nav-list");
+  if(!nl) return;
+  if(!db.funds.length){nl.innerHTML=`<p style="font-size:13px;color:var(--muted)">投資信託タブで銘柄を登録してください</p>`;return;}
+  const pm=unitMap();
+  nl.innerHTML=db.funds.map(f=>{const u=pm[f.id]||0;return `<div class="nav-row"><span class="nav-name" title="${esc(f.name)}">${esc(f.name)}</span><span class="nav-units">残 ${u.toLocaleString()} 口</span><input type="number" class="nav-input" value="${f.currentNav||""}" placeholder="例：20000" onchange="setNav('${f.id}',this.value)" /><span class="nav-unit-label">円/万口</span></div>`;}).join("");
+}
+function saveConfig(){const t=parseFloat(document.getElementById("cfg-total").value);if(!t||t<=0){alert("借入総額を入力してください");return;}db.config={totalDebt:t,deadline:document.getElementById("cfg-dl").value,note:document.getElementById("cfg-note").value};dbSave();alert("✅ 設定を更新しました");renderAll();}
+
+// ============ スプレッドシートエクスポート ============
+function clipCopy(text, label) {
+  navigator.clipboard.writeText(text).then(() => {
+    const el = document.getElementById('export-msg');
+    el.textContent = label + ' をクリップボードにコピーしました！Sheets に貼り付けてください。';
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    alert(label + ' をコピーしました。Sheets に貼り付けてください。');
+  });
+}
+
+function copyOverview() {
+  const rem = remDebt(), mo = remMonths(), monthly = mo > 0 ? rem / mo : rem;
+  const cash = totCash(), trust = trustVal();
+  const cashRem = Math.max(0, db.config.totalDebt - cash);
+  const rows = [
+    ['項目', '値', '項目', '値'],
+    ['現金残高', Math.round(cashRem), '累計現金返済額', Math.round(cash)],
+    ['※投資信託評価額', Math.round(trust), '', ''],
+    ['※残返済額合計', Math.round(rem), '', ''],
+    ['返済期限', db.config.deadline || '', '', ''],
+    ['残り月数', mo, '', ''],
+    ['', '', '', ''],
+    ['今月の最低返済額', Math.round(monthly), '', ''],
+    ['', '', '', ''],
+    ['※投資信託評価額について', '', '', ''],
+    ['表示されている評価額は参考です。実際の返済は銘柄の取引口数にて計算しております', '', '', ''],
+    ['', '', '', ''],
+    ['データ出力日', new Date().toLocaleString('ja-JP'), '', ''],
+  ];
+  clipCopy(rows.map(r => r.join('\t')).join('\n'), '概要');
+}
+
+function copyTrust() {
+  const pm = unitMap();
+  const NOTE = '※表示されている評価額は参考です。実際の返済は銘柄の取引口数にて計算しております';
+  const lines = [
+    [NOTE],
+    [''],
+  ];
+  db.funds.forEach((f, i) => {
+    const repaid = pm[f.id] || 0;
+    const orig = f.originalUnits || 0;
+    const remaining = Math.max(0, orig - repaid);
+    const val = f.currentNav > 0 ? Math.round(remaining * f.currentNav / 10000).toLocaleString() + ' 円' : '—';
+    if (i > 0) lines.push(['']);
+    lines.push(['【銘柄' + (i+1) + '】', f.name]);
+    if (f.code) lines.push(['コード', f.code]);
+    lines.push(['基準価額', f.currentNav ? f.currentNav.toLocaleString() + ' 円/万口' : '未設定']);
+    lines.push(['算出日', f.navUpdatedAt || '—']);
+    lines.push(['元の口数', orig.toLocaleString() + ' 口']);
+    lines.push(['返済済み口数', repaid.toLocaleString() + ' 口']);
+    lines.push(['残口数', remaining.toLocaleString() + ' 口']);
+    lines.push(['現在評価額（参考）', val]);
+  });
+  lines.push([''], ['データ出力日', new Date().toLocaleString('ja-JP')]);
+  const tsv = lines.map(r => r.join('\t')).join('\n');
+  clipCopy(tsv, '投資信託');
+}
+
+function copyHistory() {
+  const sorted = [...db.payments].sort((a, b) => b.date.localeCompare(a.date));
+  const lines = [
+    ['返済日', '合計', '現金', '投信充当', 'メモ'],
+  ];
+  sorted.forEach(p => {
+    const tp = p.trustPurchases || [];
+    const trustTotal = tp.reduce((s, t) => s + (t.allocatedAmount || t.amount || 0), 0);
+    const total = (p.cashAmount || 0) + trustTotal;
+    lines.push([
+      p.date,
+      total.toLocaleString(),
+      p.cashAmount ? p.cashAmount.toLocaleString() : '—',
+      trustTotal ? trustTotal.toLocaleString() : '—',
+      p.note || '',
+    ]);
+    // 投信明細（口数未確定なら「未確定」表示）
+    tp.forEach(t => {
+      lines.push([
+        '',
+        '',
+        '└ ' + (t.fundName || ''),
+        (t.allocatedAmount || t.amount || 0).toLocaleString() + ' 円',
+        t.units != null ? t.units.toLocaleString() + ' 口' : '口数未確定',
+      ]);
+    });
+  });
+  lines.push([''], ['データ出力日', new Date().toLocaleString('ja-JP')]);
+  const tsv = lines.map(r => r.join('\t')).join('\n');
+  clipCopy(tsv, '返済履歴');
+}
+
+function exportJson(){const b=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`debt-${new Date().toISOString().split("T")[0]}.json`;a.click();}
+function resetAll(){if(!confirm("全データを削除します。元に戻せません。続けますか？"))return;localStorage.removeItem(LSKEY);location.reload();}
+
+// ============ 計算 ============
+function remMonths(){const n=new Date(),d=new Date(db.config.deadline);return Math.max(0,(d.getFullYear()-n.getFullYear())*12+d.getMonth()-n.getMonth());}
+function totCash(){return db.payments.reduce((s,p)=>s+(p.cashAmount||0),0);}
+function unitMap(){const m={};db.payments.forEach(p=>(p.trustPurchases||[]).forEach(t=>{if(t.units){m[t.fundId]=(m[t.fundId]||0)+t.units;}}));return m;}
+function trustVal(){const m=unitMap();return db.funds.reduce((s,f)=>{const orig=f.originalUnits||0,repaid=m[f.id]||0,rem=orig>0?Math.max(0,orig-repaid):(repaid);return s+rem*(f.currentNav||0)/10000;},0);}
+function remDebt(){
+  // 残返済額 = (現金借入残高) + (投資信託現在評価額)
+  const cashRem = Math.max(0, db.config.totalDebt - totCash());
+  return cashRem + trustVal();
+}
+
+// ============ ユーティリティ ============
+function yen(n){return "\u00a5"+Math.round(n).toLocaleString("ja-JP");}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+// ============ チャート ============
+let _charts={};
+function renderCharts(){
+  if(typeof Chart==='undefined') return;
+  renderDoughnut();
+  renderLine();
+}
+
+function renderDoughnut(){
+  const ctx=document.getElementById('chart-doughnut');
+  if(!ctx) return;
+  const cash=totCash(),trust=trustVal();
+  const cashRem=Math.max(0,db.config.totalDebt-cash);
+  const total=cashRem+trust;
+  if(_charts.doughnut){_charts.doughnut.destroy();delete _charts.doughnut;}
+  document.getElementById('chart-center-value').textContent=total>0?('¥'+(Math.round(total/10000))+'万'):'¥0';
+  _charts.doughnut=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:['現金残高','投資信託評価額','現金返済済み'],
+      datasets:[{
+        data:[cashRem,trust,cash],
+        backgroundColor:['#e05c5c','#e0a85c','#5ce07a'],
+        borderWidth:2,
+        borderColor:'#0e1f1d',
+      }]
+    },
+    options:{
+      responsive:true,cutout:'68%',
+      plugins:{
+        legend:{position:'bottom',labels:{color:'#6b9e9a',font:{size:11},boxWidth:12,padding:10}},
+        tooltip:{callbacks:{label:c=>' '+c.label+': ¥'+Math.round(c.raw).toLocaleString('ja-JP')}}
+      }
+    }
+  });
+}
+
+function renderLine(){
+  const ctx=document.getElementById('chart-line');
+  if(!ctx) return;
+  const mo=remMonths(),rem=remDebt();
+  const monthly=mo>0?rem/mo:0;
+  const now=new Date();
+  const labels=[],projData=[];
+  // 現在〜期限まで（最大60点、間引きあり）
+  const step=Math.max(1,Math.ceil(mo/48));
+  for(let i=0;i<=mo;i+=step){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    labels.push(`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`);
+    projData.push(Math.round(Math.max(0,rem-monthly*i)));
+  }
+  // 期限を必ず含める
+  if(mo%step!==0){
+    const dl=new Date(db.config.deadline);
+    labels.push(`${dl.getFullYear()}/${String(dl.getMonth()+1).padStart(2,'0')}`);
+    projData.push(0);
+  }
+  if(_charts.line){_charts.line.destroy();delete _charts.line;}
+  _charts.line=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'返済見通し',
+        data:projData,
+        borderColor:'#0abab5',
+        backgroundColor:'rgba(10,186,181,0.08)',
+        fill:true,tension:0.3,
+        pointRadius:projData.length>24?0:3,
+        pointHoverRadius:5,
+        borderWidth:2,
+      }]
+    },
+    options:{
+      responsive:true,
+      scales:{
+        x:{ticks:{color:'#6b9e9a',font:{size:10},maxTicksLimit:8},grid:{color:'rgba(26,51,48,0.6)'},border:{color:'#1a3330'}},
+        y:{ticks:{color:'#6b9e9a',font:{size:10},callback:v=>'¥'+(v>=10000?Math.round(v/10000)+'万':v.toLocaleString())},grid:{color:'rgba(26,51,48,0.6)'},border:{color:'#1a3330'}}
+      },
+      plugins:{
+        legend:{labels:{color:'#e0f0ef',font:{size:11}}},
+        tooltip:{callbacks:{label:c=>' 残: ¥'+c.raw.toLocaleString('ja-JP')+'円'}}
+      }
+    }
+  });
+}
+
+function renderAll(){renderOverview();renderPaymentTab();renderTrustCards();renderHistory();renderSettings();renderCharts();}
+
+// 口数確定モーダル
+let _um = {payId: null, tIdx: null};
+
+function openUnitsModal(payId, tIdx) {
+  _um = {payId: String(payId), tIdx: tIdx};
+  const pay = db.payments.find(p => String(p.id) === String(payId));
+  if (!pay) return;
+  const t = pay.trustPurchases && pay.trustPurchases[tIdx];
+  if (!t) return;
+  document.getElementById('units-modal-desc').textContent =
+    t.fund + '  ¥' + (t.allocatedAmount || t.amount || 0).toLocaleString() + ' 分の口数を入力してください';
+  document.getElementById('units-modal-u').value = t.units != null ? t.units : '';
+  document.getElementById('units-modal-n').value = t.nav != null ? t.nav : '';
+  document.getElementById('units-modal').style.display = 'flex';
+}
+
+function closeUnitsModal() {
+  document.getElementById('units-modal').style.display = 'none';
+}
+
+function submitUnitsModal() {
+  const u = parseFloat(document.getElementById('units-modal-u').value);
+  const n = parseFloat(document.getElementById('units-modal-n').value);
+  if (!u || u <= 0) { alert('口数を入力してください'); return; }
+  const pay = db.payments.find(p => String(p.id) === String(_um.payId));
+  if (!pay) return;
+  const t = pay.trustPurchases && pay.trustPurchases[_um.tIdx];
+  if (!t) return;
+  t.units = u;
+  if (!isNaN(n) && n > 0) t.nav = n;
+  dbSave();
+  closeUnitsModal();
+  renderHistory();
+  renderOverview();
+  alert('口数を確定しました！');
+}
+
+init();
+</script>
+</body>
+</html>
