@@ -181,9 +181,10 @@
   <header><span class="logo">借金返済管理</span><span class="dl-badge">返済期限 2030/8/12</span></header>
   <div class="tabs">
     <div class="tab active" data-tab="overview" onclick="switchTab(this)">概要</div>
-    <div class="tab" data-tab="payment" onclick="switchTab(this)">返済入力</div>
     <div class="tab" data-tab="trust" onclick="switchTab(this)">投資信託</div>
     <div class="tab" data-tab="history" onclick="switchTab(this)">返済履歴</div>
+    <div class="tab" data-tab="payment" onclick="switchTab(this)">返済入力</div>
+    <div class="tab" data-tab="rules" onclick="switchTab(this)">返済条件・管理方法</div>
     <div class="tab" data-tab="settings" onclick="switchTab(this)">設定</div>
   </div>
 
@@ -305,25 +306,39 @@
         <button class="btn btn-secondary" onclick="generateMigrateUrl()">🔄 GitHub Pagesにデータを移行</button>
       </div>
     </div>
-    <div class="card">
-      <div class="section-title">📊 スプレッドシートにエクスポート</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">各ボタンでデータをコピー → Google スプレッドシートの対応シートに貼り付け（Ctrl+V）してください。</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn btn-secondary" onclick="copyOverview()">📋 概要をコピー</button>
-        <button class="btn btn-secondary" onclick="copyTrust()">📋 投資信託をコピー</button>
-        <button class="btn btn-secondary" onclick="copyHistory()">📋 返済履歴をコピー</button>
-      </div>
-      <p id="export-msg" style="font-size:12px;color:var(--success);margin-top:8px;display:none;"></p>
-    </div>
+
     <div class="card">
       <div class="section-title">データ管理</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn btn-secondary" onclick="exportJson()">JSONでエクスポート</button>
+        <button class="btn btn-secondary" onclick="exportJson()">💾 バックアップを保存（JSON）</button>
+        <button class="btn btn-secondary" onclick="importJson()">📂 バックアップから復元</button>
         <button class="btn btn-danger" onclick="resetAll()">全データをリセット</button>
       </div>
     </div>
   </div>
 </div>
+  <!-- 返済条件・管理方法 -->
+  <div id="tab-rules" class="content">
+    <div class="card">
+      <div class="section-title">返済条件・管理方法</div>
+      <div style="font-size:14px;line-height:1.9;color:var(--text);">
+        <ol style="padding-left:18px;margin:0;display:flex;flex-direction:column;gap:14px;">
+          <li>毎月の返済期限は、各月末日までとします。</li>
+          <li>表示されている最低返済額以上の金額を、1,000円単位でご入金ください。</li>
+          <li>表示されている最低返済額は、最終算出日時点の投資信託の時価評価額をもとに算出しています。投資信託は価格変動商品であるため、基準価額の変動により、必要返済額は今後増減する可能性があります。</li>
+          <li>毎月の返済額のうち、原則として50％以上を投資信託分の返済に充当します。</li>
+          <li>投資信託分へ充当した金額については、充当時点の基準価額をもとに口数へ換算し、返済済み口数として履歴に記録します。</li>
+          <li>返済管理における最優先の目的は、最終返済期限までの完済です。そのため、投資信託分への充当を意図的に遅らせることはありません。</li>
+          <li>ただし、返済額が表示されている最低返済額を下回る場合、または<strong>安定した返済額が継続して確認できない場合（3か月程度を目安）</strong>は、残債の状況に応じて、現金貸付分への充当を優先する場合があります。</li>
+          <li>返済履歴は、原則として2回のタイミングで更新します。①入金額を確認した時点、②投資信託分へ充当した金額により取得可能な口数が確定した時点です。なお、口数の確定には仕組み上1〜2か月程度かかる場合があります。</li>
+          <li>表示内容と実際の入金額・残高等に相違がある場合は、速やかにご連絡ください。</li>
+          <li>最終返済期限までに完済されない場合は、残額の返済方法について改めて協議し、必要に応じて第三者への相談または法的手続きを検討します。</li>
+          <li>本返済ルールについて、内容に不明点や異議がある場合はご連絡ください。特段のご連絡がない場合は、内容をご確認・ご了承いただいたものとして取り扱います。</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
 
 <!-- 基準価額手動入力モーダル -->
 <div class="modal-overlay" id="nav-modal" style="display:none;" onclick="if(event.target===this)closeNavModal()">
@@ -583,10 +598,7 @@ function renderTrustCards(){
         <div class="fund-stat">
           <div class="fs-label">元の口数</div>
           <div class="orig-units-wrap">
-            <input type="number" value="${orig||""}" placeholder="例：10000" min="0"
-              style="width:100px!important;font-size:14px;"
-              onchange="setOrigUnits('${f.id}',this.value)" />
-            <span style="font-size:12px;color:var(--muted)">口</span>
+            <div style="font-size:16px;font-weight:700;color:var(--text)">${orig>0?orig.toLocaleString()+"&nbsp;口":"—"}</div>
           </div>
           ${orig>0?`<div class="fs-sub">${repaid.toLocaleString()} / ${orig.toLocaleString()} 口</div>`:`<div class="fs-sub muted">入力してください</div>`}
         </div>
@@ -877,7 +889,7 @@ function renderSettings(){
   if(!nl) return;
   if(!db.funds.length){nl.innerHTML=`<p style="font-size:13px;color:var(--muted)">投資信託タブで銘柄を登録してください</p>`;return;}
   const pm=unitMap();
-  nl.innerHTML=db.funds.map(f=>{const u=pm[f.id]||0;return `<div class="nav-row"><span class="nav-name" title="${esc(f.name)}">${esc(f.name)}</span><span class="nav-units">残 ${u.toLocaleString()} 口</span><input type="number" class="nav-input" value="${f.currentNav||""}" placeholder="例：20000" onchange="setNav('${f.id}',this.value)" /><span class="nav-unit-label">円/万口</span></div>`;}).join("");
+  nl.innerHTML=db.funds.map(f=>{const u=pm[f.id]||0;return `<div class="nav-row"><span class="nav-name" title="${esc(f.name)}">${esc(f.name)}</span><input type="number" class="nav-input" value="${f.currentNav||""}" placeholder="例：20000" onchange="setNav('${f.id}',this.value)" /><span class="nav-unit-label">円/万口</span></div>`;}).join("");
 }
 function saveConfig(){const t=parseFloat(document.getElementById("cfg-total").value);if(!t||t<=0){alert("借入総額を入力してください");return;}db.config={totalDebt:t,deadline:document.getElementById("cfg-dl").value,note:document.getElementById("cfg-note").value};dbSave();alert("✅ 設定を更新しました");renderAll();}
 
@@ -979,6 +991,26 @@ function copyHistory() {
 }
 
 function exportJson(){const b=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`debt-${new Date().toISOString().split("T")[0]}.json`;a.click();}
+function importJson(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange=e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(!data.config||!data.payments||!data.funds) throw new Error('フォーマットが正しくありません');
+        if(!confirm(`バックアップを復元します。\n現在のデータは上書きされます。\n続けますか？`)) return;
+        localStorage.setItem(LSKEY, JSON.stringify(data));
+        alert('✅ 復元しました！再読み込みします。');
+        location.reload();
+      }catch(err){ alert('❌ 読み込み失敗: '+err.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
 function resetAll(){if(!confirm("全データを削除します。元に戻せません。続けますか？"))return;localStorage.removeItem(LSKEY);location.reload();}
 
 // ============ 計算 ============
