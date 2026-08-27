@@ -300,7 +300,10 @@
     <div class="card">
       <div class="section-title">🔗 閲覧専用URLで共有</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">現在のデータをURLに埋め込んで共有できます。受け取った人は<strong>閲覧のみ</strong>可能です。</p>
-      <button class="btn btn-primary" onclick="generateShareUrl()">📤 共有URLを生成してコピー</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="generateShareUrl()">📤 共有URLを生成してコピー</button>
+        <button class="btn btn-secondary" onclick="generateMigrateUrl()">🔄 GitHub Pagesにデータを移行</button>
+      </div>
     </div>
     <div class="card">
       <div class="section-title">📊 スプレッドシートにエクスポート</div>
@@ -407,6 +410,23 @@ let isReadOnly = false;
 
 function initShareMode() {
   const hash = location.hash;
+
+  // 移行モード（#import=）→ データをlocalStorageに保存して通常起動
+  if (hash.startsWith('#import=')) {
+    try {
+      const encoded = hash.slice(8);
+      const json = decodeURIComponent(escape(atob(encoded)));
+      const imported = JSON.parse(json);
+      localStorage.setItem(LSKEY, JSON.stringify(imported));
+      history.replaceState(null, '', location.pathname); // hashを消す
+      alert('データを取り込みました！このページで引き続き使えます。');
+    } catch(e) {
+      alert('データの取り込みに失敗しました: ' + e.message);
+    }
+    return false; // 通常のinit()に進む
+  }
+
+  // 閲覧専用モード（#share=）
   if (!hash.startsWith('#share=')) return false;
   try {
     const encoded = hash.slice(7);
@@ -432,6 +452,26 @@ function applyReadOnly() {
   document.querySelectorAll('.btn-danger, .btn-primary:not(#ro-ok)').forEach(b => {
     if (!b.closest('#readonly-banner')) { b.disabled = true; b.style.opacity = '0.3'; b.style.cursor = 'default'; }
   });
+}
+
+function generateMigrateUrl() {
+  const githubBase = prompt(
+    'GitHub PagesのベースURLを入力してください\n例: https://yute0430-hub.github.io/debt-manager/debt-manager.html',
+    'https://yute0430-hub.github.io/debt-manager/debt-manager.html'
+  );
+  if (!githubBase) return;
+  try {
+    const json = JSON.stringify(db);
+    const encoded = btoa(unescape(encodeURIComponent(json)));
+    const url = githubBase.split('#')[0] + '#import=' + encoded;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('移行URLをコピーしました！\nそのURLをブラウザで開くとデータが取り込まれます。');
+    }).catch(() => {
+      prompt('このURLをブラウザで開いてください：', url);
+    });
+  } catch(e) {
+    alert('エラー: ' + e.message);
+  }
 }
 
 function generateShareUrl() {
