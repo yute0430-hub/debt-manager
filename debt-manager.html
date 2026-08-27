@@ -299,6 +299,25 @@
       <p class="hint" style="margin-top:8px;">基準価額は「円/1万口」で入力してください（楽天証券の表示単位）</p>
     </div>
     <div class="card">
+      <div class="section-title">📡 GitHub連携（固定URL公開）</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">一度設定すれば、相手は常に同じURLで最新データを閲覧できます。</p>
+      <div class="form-group"><label>GitHubユーザー名</label><input type="text" id="gh-user" placeholder="例: yute0430-hub" /></div>
+      <div class="form-group"><label>リポジトリ名</label><input type="text" id="gh-repo" placeholder="debt-manager" /></div>
+      <div class="form-group">
+        <label>Personal Access Token <span style="font-size:11px;color:var(--muted)">（Contents書き込み権限が必要）</span></label>
+        <input type="password" id="gh-token" placeholder="ghp_xxxx..." />
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn btn-secondary btn-sm" onclick="saveGhSettings()">設定を保存</button>
+        <button class="btn btn-primary" onclick="publishData()">📡 最新データを公開</button>
+      </div>
+      <div id="gh-fixed-url" style="display:none;font-size:12px;padding:8px 10px;background:var(--bg);border-radius:6px;border:1px solid var(--border);">
+        相手への固定URL: <span id="gh-url-text" style="color:var(--accent);word-break:break-all;"></span>
+        <button class="btn btn-secondary btn-sm" style="margin-left:8px;" onclick="copyGhUrl()">コピー</button>
+      </div>
+      <p id="gh-msg" style="font-size:12px;margin-top:8px;display:none;"></p>
+    </div>
+    <div class="card">
       <div class="section-title">🔗 閲覧専用URLで共有</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">現在のデータをURLに埋め込んで共有できます。受け取った人は<strong>閲覧のみ</strong>可能です。</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -505,7 +524,85 @@ function generateShareUrl() {
   }
 }
 
+// ============ GitHub連携 / 固定URL公開 ============
+const GH_KEY = 'debt-mgr-gh';
+function loadGhCfg() { try { return JSON.parse(localStorage.getItem(GH_KEY)) || {}; } catch(e) { return {}; } }
+function saveGhSettings() {
+  const s = {
+    user: document.getElementById('gh-user').value.trim(),
+    repo: document.getElementById('gh-repo').value.trim() || 'debt-manager',
+    token: document.getElementById('gh-token').value.trim(),
+  };
+  if (!s.user || !s.token) { alert('ユーザー名とTokenを入力してください'); return; }
+  localStorage.setItem(GH_KEY, JSON.stringify(s));
+  renderGhFixed(s);
+  alert('✅ 保存しました');
+}
+function renderGhFixed(s) {
+  if (!s || !s.user) return;
+  const repo = s.repo || 'debt-manager';
+  const url = `https://${s.user}.github.io/${repo}/debt-manager.html?view`;
+  document.getElementById('gh-url-text').textContent = url;
+  document.getElementById('gh-fixed-url').style.display = 'block';
+}
+function copyGhUrl() {
+  const url = document.getElementById('gh-url-text').textContent;
+  navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました！')).catch(() => prompt('コピーしてください:', url));
+}
+async function publishData() {
+  const s = loadGhCfg();
+  if (!s.user || !s.token) { alert('GitHub設定を先に保存してください'); return; }
+  const repo = s.repo || 'debt-manager';
+  const apiUrl = `https://api.github.com/repos/${s.user}/${repo}/contents/data.json`;
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(db))));
+  const msg = document.getElementById('gh-msg');
+  msg.style.display = 'block'; msg.style.color = 'var(--muted)'; msg.textContent = '公開中...';
+  let sha = null;
+  try {
+    const r = await fetch(apiUrl, { headers: { 'Authorization': `token ${s.token}`, 'Accept': 'application/vnd.github.v3+json' } });
+    if (r.ok) { const d = await r.json(); sha = d.sha; }
+  } catch(e) {}
+  const body = { message: `データ更新 ${new Date().toLocaleString('ja-JP')}`, content };
+  if (sha) body.sha = sha;
+  try {
+    const r = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${s.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (r.ok) {
+      msg.style.color = 'var(--success)'; msg.textContent = '✅ 公開しました！相手が同じURLを更新するだけで最新データが見られます。';
+    } else {
+      const err = await r.json();
+      msg.style.color = 'var(--danger)'; msg.textContent = '❌ 失敗: ' + (err.message || r.status);
+    }
+  } catch(e) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ エラー: ' + e.message; }
+}
+
+// ============ 閲覧モード（?view） ============
+async function initViewMode() {
+  const s = loadGhCfg();
+  const user = s.user || location.hostname.split('.')[0];
+  const repo = s.repo || 'debt-manager';
+  const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/data.json?t=${Date.now()}`;
+  try {
+    const r = await fetch(rawUrl);
+    if (!r.ok) throw new Error('データが見つかりません（まだ公開されていない可能性があります）');
+    db = await r.json();
+    isReadOnly = true;
+    document.getElementById('app').style.display = 'block';
+    renderAll();
+    setTimeout(applyReadOnly, 50);
+  } catch(e) {
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('app').innerHTML = `<div style="padding:60px 20px;text-align:center;color:var(--muted)"><div style="font-size:40px;margin-bottom:16px;">📭</div><p style="font-size:16px;margin-bottom:8px;">データを読み込めませんでした</p><p style="font-size:13px;">${e.message}</p></div>`;
+  }
+}
+
 function init(){
+  // 閲覧モード（?view）
+  if (location.search.includes('view')) { initViewMode(); return; }
   // 共有URLモード検出
   if (initShareMode()) {
     document.getElementById('app').style.display = 'block';
@@ -881,6 +978,14 @@ function delPayment(id){if(!confirm("この返済記録を削除しますか？"
 
 // ============ 設定 ============
 function renderSettings(){
+  // GitHub設定を復元
+  const ghS = loadGhCfg();
+  if (document.getElementById('gh-user')) {
+    document.getElementById('gh-user').value = ghS.user || '';
+    document.getElementById('gh-repo').value = ghS.repo || 'debt-manager';
+    document.getElementById('gh-token').value = ghS.token || '';
+    renderGhFixed(ghS);
+  }
   document.getElementById("cfg-total").value=db.config.totalDebt;
   document.getElementById("cfg-dl").value=db.config.deadline;
   document.getElementById("cfg-note").value=db.config.note||"";
